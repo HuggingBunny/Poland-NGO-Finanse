@@ -329,7 +329,21 @@
     "settingsSaved": "Ustawienia zapisane",
     "adminOnly": "Ta sekcja dostępna tylko dla administratorów",
     "themeSettings": "Wygląd",
-    "languageSettings": "Język"
+    "languageSettings": "Język",
+    "legalCompliance": "Zgodność Prawna",
+    "legalNoUpdates": "Brak aktualnych zmian prawnych",
+    "effectiveDate": "Data wejścia w życie",
+    "daysUntil": "dni do wejścia w życie",
+    "pastDue": "Termin minął",
+    "requiresVersion": "Wymagana wersja aplikacji",
+    "applyUpdate": "Aktualizuj",
+    "dismiss": "Odrzuć",
+    "dismissed": "Odrzucono",
+    "updateAvailable": "Dostępna aktualizacja",
+    "affects_invoicing": "Fakturowanie",
+    "affects_payroll": "Kadry i płace",
+    "affects_reports": "Raporty",
+    "affects_receipts": "Paragony"
   },
   "roles": {
     "admin": "Administrator",

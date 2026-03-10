@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sun, Moon, Globe, LogOut, ChevronDown, User } from 'lucide-react';
+import { Sun, Moon, Globe, LogOut, ChevronDown, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLegalUpdates } from '../../contexts/LegalUpdatesContext';
 import i18n from '../../i18n';
 import clsx from 'clsx';
 
 interface HeaderProps {
   currentModuleKey: string;
+  onNavigate?: (module: string) => void;
 }
 
-export function Header({ currentModuleKey }: HeaderProps) {
+export function Header({ currentModuleKey, onNavigate }: HeaderProps) {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { urgentCount, updates } = useLegalUpdates();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const toggleLang = () => {
@@ -35,6 +38,14 @@ export function Header({ currentModuleKey }: HeaderProps) {
     dyrektor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     wolontariusz: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   };
+
+  // Determine badge color: red if any <=30 days, yellow if <=90 days
+  const criticalCount = updates.filter(u => !u.dismissed && u.days_until <= 30).length;
+  const bellBadgeClass = criticalCount > 0
+    ? 'bg-red-500'
+    : urgentCount > 0
+    ? 'bg-yellow-500'
+    : null;
 
   return (
     <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
@@ -63,6 +74,23 @@ export function Header({ currentModuleKey }: HeaderProps) {
           title={t('theme.toggle')}
         >
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+
+        {/* Legal updates bell */}
+        <button
+          onClick={() => onNavigate?.('settings')}
+          className="relative p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title={t('settings.legalCompliance')}
+        >
+          <Bell className="w-4 h-4" />
+          {bellBadgeClass && urgentCount > 0 && (
+            <span className={clsx(
+              'absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-white text-[10px] font-bold px-1',
+              bellBadgeClass
+            )}>
+              {urgentCount}
+            </span>
+          )}
         </button>
 
         {/* Divider */}

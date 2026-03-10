@@ -257,3 +257,22 @@ export interface AppSettings {
   language: 'pl' | 'en';
   theme: 'light' | 'dark' | 'system';
 }
+
+// ─── Legal Updates ────────────────────────────────────────────────────────────
+
+export interface LegalChange {
+  id: string;
+  title: string;
+  description: string;
+  effective_date: string;
+  severity: 'info' | 'warning' | 'critical';
+  affects: string[];
+  app_version_required: string | null;
+  update_available: boolean;
+}
+
+export interface LegalChangeWithStatus {
+  change: LegalChange;
+  days_until: number;
+  dismissed: boolean;
+}

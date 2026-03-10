@@ -329,7 +329,21 @@
     "settingsSaved": "Settings saved",
     "adminOnly": "This section is only available to administrators",
     "themeSettings": "Appearance",
-    "languageSettings": "Language"
+    "languageSettings": "Language",
+    "legalCompliance": "Legal Compliance",
+    "legalNoUpdates": "No current legal changes",
+    "effectiveDate": "Effective Date",
+    "daysUntil": "days until effective",
+    "pastDue": "Past due",
+    "requiresVersion": "Requires app version",
+    "applyUpdate": "Apply Update",
+    "dismiss": "Dismiss",
+    "dismissed": "Dismissed",
+    "updateAvailable": "Update available",
+    "affects_invoicing": "Invoicing",
+    "affects_payroll": "Payroll",
+    "affects_reports": "Reports",
+    "affects_receipts": "Receipts"
   },
   "roles": {
     "admin": "Administrator",

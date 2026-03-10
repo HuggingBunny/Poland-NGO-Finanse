@@ -1,0 +1,54 @@
+{
+  "last_updated": "2026-03-10",
+  "feed_version": "1",
+  "changes": [
+    {
+      "id": "ksef-mandatory-large-2026",
+      "title": "KSeF — obowiązek dla dużych firm",
+      "description": "Krajowy System e-Faktur staje się obowiązkowy dla podmiotów o przychodach powyżej 200 tys. PLN od 1 lipca 2026 r. Podstawa prawna: ustawa z dnia 16 czerwca 2023 r. (Dz.U. 2023 poz. 1598).",
+      "effective_date": "2026-07-01",
+      "severity": "warning",
+      "affects": ["invoicing"],
+      "app_version_required": null,
+      "update_available": false,
+      "source_url": "https://www.gov.pl/web/kas/ksef",
+      "legal_basis": "Ustawa o KSeF, Dz.U. 2023 poz. 1598"
+    },
+    {
+      "id": "ksef-mandatory-all-2027",
+      "title": "KSeF — powszechny obowiązek",
+      "description": "KSeF staje się obowiązkowy dla wszystkich podmiotów VAT od 1 lutego 2027 r. Wymagana weryfikacja numerów KSeF w systemie.",
+      "effective_date": "2027-02-01",
+      "severity": "critical",
+      "affects": ["invoicing"],
+      "app_version_required": "1.1.0",
+      "update_available": false,
+      "source_url": "https://www.gov.pl/web/kas/ksef",
+      "legal_basis": "Ustawa o KSeF, Dz.U. 2023 poz. 1598 art. 106na"
+    },
+    {
+      "id": "zus-2027-rates",
+      "title": "Nowe stawki ZUS 2027",
+      "description": "Zmiana podstawy wymiaru składek ZUS oraz progów od 1 stycznia 2027. Konieczna aktualizacja tabel stawek w module kadrowym.",
+      "effective_date": "2027-01-01",
+      "severity": "critical",
+      "affects": ["payroll"],
+      "app_version_required": "1.1.0",
+      "update_available": true,
+      "source_url": "https://www.zus.pl/składki",
+      "legal_basis": "Ustawa o systemie ubezpieczeń społecznych (Dz.U. 1998 nr 137 poz. 887)"
+    },
+    {
+      "id": "jpk-v7m-schema-2026",
+      "title": "Nowy schemat JPK_V7M (v2)",
+      "description": "Ministerstwo Finansów ogłosiło aktualizację schematu XSD dla JPK_V7M od rozliczenia za lipiec 2026. Stara wersja przestaje być akceptowana.",
+      "effective_date": "2026-08-25",
+      "severity": "warning",
+      "affects": ["reports"],
+      "app_version_required": null,
+      "update_available": false,
+      "source_url": "https://www.gov.pl/web/finanse/struktury-jpk",
+      "legal_basis": "Rozporządzenie MF z dnia 15 października 2019 r. (Dz.U. 2019 poz. 1988)"
+    }
+  ]
+}

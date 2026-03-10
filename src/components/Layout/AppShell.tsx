@@ -60,7 +60,7 @@ export function AppShell() {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Header currentModuleKey={MODULE_TITLE_KEYS[activeModule]} />
+        <Header currentModuleKey={MODULE_TITLE_KEYS[activeModule]} onNavigate={mod => handleModuleChange(mod as Module)} />
         <main className="flex-1 overflow-auto p-6">
           {renderModule()}
         </main>

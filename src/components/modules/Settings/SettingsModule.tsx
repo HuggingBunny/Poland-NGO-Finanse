@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Users, Building2, Brain, Shield, Plus, Pencil, Trash2, Key,
-  CheckCircle, XCircle, Loader2, Save, AlertTriangle, RefreshCw
+  CheckCircle, XCircle, Loader2, Save, AlertTriangle, RefreshCw, Scale
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useLegalUpdates } from '../../../contexts/LegalUpdatesContext';
 import { mockOrganization } from '../../../data/mockData';
 import type { User, UserRole } from '../../../types';
 import clsx from 'clsx';
 
-type SettingsTab = 'users' | 'organization' | 'ai' | 'access';
+type SettingsTab = 'users' | 'organization' | 'ai' | 'legal';
 
 const OLLAMA_MODELS = [
   'deepseek-r1:7b',
@@ -112,6 +113,7 @@ function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
 export function SettingsModule() {
   const { t } = useTranslation();
   const { user: currentUser, allUsers, updateUsers } = useAuth();
+  const { updates, urgentCount, loading: legalLoading, dismiss, apply, refresh: refreshLegal } = useLegalUpdates();
   const [activeTab, setActiveTab] = useState<SettingsTab>('users');
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -146,7 +148,6 @@ export function SettingsModule() {
   const handleTestConnection = async () => {
     setConnectionStatus('testing');
     await new Promise(r => setTimeout(r, 1500));
-    // Mock: fail for non-localhost
     setConnectionStatus(ollamaUrl.includes('localhost') || ollamaUrl.includes('127.0.0.1') ? 'connected' : 'disconnected');
   };
 
@@ -164,10 +165,23 @@ export function SettingsModule() {
     wolontariusz: t('settings.role_wolontariusz'),
   };
 
+  const severityColors: Record<string, string> = {
+    info: 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20',
+    warning: 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20',
+    critical: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20',
+  };
+
+  const severityBadge: Record<string, string> = {
+    info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+    warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+    critical: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  };
+
   const TABS = [
     { id: 'users' as SettingsTab, label: t('settings.userManagement'), icon: Users },
     { id: 'organization' as SettingsTab, label: t('settings.orgSettings'), icon: Building2 },
     { id: 'ai' as SettingsTab, label: t('settings.aiSettings'), icon: Brain },
+    { id: 'legal' as SettingsTab, label: t('settings.legalCompliance'), icon: Scale, badge: urgentCount > 0 ? urgentCount : undefined },
   ];
 
   if (!isAdmin) {
@@ -182,7 +196,7 @@ export function SettingsModule() {
   return (
     <div className="space-y-5">
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit flex-wrap">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
@@ -198,6 +212,11 @@ export function SettingsModule() {
             >
               <Icon className="w-4 h-4" />
               {tab.label}
+              {tab.badge !== undefined && (
+                <span className="ml-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                  {tab.badge}
+                </span>
+              )}
             </button>
           );
         })}
@@ -457,6 +476,104 @@ Tekst OCR do analizy:
 {ocr_text}`}
             </pre>
           </div>
+        </div>
+      )}
+
+      {/* LEGAL COMPLIANCE TAB */}
+      {activeTab === 'legal' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Scale className="w-5 h-5 text-blue-500" />
+              {t('settings.legalCompliance')}
+            </h3>
+            <button
+              onClick={() => refreshLegal()}
+              disabled={legalLoading}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={clsx('w-4 h-4', legalLoading && 'animate-spin')} />
+              {t('common.refresh')}
+            </button>
+          </div>
+
+          {updates.length === 0 && !legalLoading && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-8 text-center">
+              <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">{t('settings.legalNoUpdates')}</p>
+            </div>
+          )}
+
+          {updates.map(({ change, days_until, dismissed }) => (
+            <div
+              key={change.id}
+              className={clsx(
+                'rounded-xl border p-5 transition-opacity',
+                severityColors[change.severity] || severityColors.info,
+                dismissed && 'opacity-50'
+              )}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full uppercase', severityBadge[change.severity] || severityBadge.info)}>
+                      {change.severity === 'critical' ? t('common.warning') : change.severity === 'warning' ? t('common.warning') : t('common.info')}
+                    </span>
+                    {change.affects.map(a => (
+                      <span key={a} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                        {t(`settings.affects_${a}`, { defaultValue: a })}
+                      </span>
+                    ))}
+                    {dismissed && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
+                        {t('settings.dismissed')}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{change.title}</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{change.description}</p>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span>{t('settings.effectiveDate')}: <strong>{change.effective_date}</strong></span>
+                    <span className={clsx(
+                      'font-semibold',
+                      days_until <= 30 ? 'text-red-600 dark:text-red-400' :
+                      days_until <= 90 ? 'text-yellow-600 dark:text-yellow-400' :
+                      'text-gray-600 dark:text-gray-400'
+                    )}>
+                      {days_until > 0
+                        ? `${days_until} ${t('settings.daysUntil')}`
+                        : t('settings.pastDue')}
+                    </span>
+                  </div>
+                  {change.app_version_required && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings.requiresVersion')}: v{change.app_version_required}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  {change.update_available && (
+                    <button
+                      onClick={() => apply(change.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      {t('settings.applyUpdate')}
+                    </button>
+                  )}
+                  {!dismissed && (
+                    <button
+                      onClick={() => dismiss(change.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      {t('settings.dismiss')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
