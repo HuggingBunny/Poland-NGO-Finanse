@@ -41,6 +41,24 @@
 - Ollama AI classification *(planned)*
 
 ---
+### Near Future Plans:
+---
+
+- 🟡 v0.5.x — UI/UX Gaps (4 items)
+#	Item	What it involves
+1	Legal compliance dashboard banner	When there are active legal warnings, show an alert card on the Dashboard (not just the Header bell icon). Links to Settings → Zgodność Prawna. Visible to admin + ksiegowa.
+2	Employee management clarity	Employees are buried in Payroll. Either a dedicated sidebar nav item ("Pracownicy") or a prominent entry point in the Payroll module header. Add/edit/deactivate forms need to be obvious.
+3	Category management UI	Categories are hardcoded enums right now. Need a Settings tab for CRUD on receipt/payment categories — new DB table, Tauri commands, receipt/bill forms load categories dynamically.
+4	Expenses by employee report	New report type: gross salary + employer ZUS + attributed receipts per employee for a date range. Table + CSV export. New Tauri command get_expenses_by_employee.
+
+🟠 v0.6.x — IT Admin Role + Logging (3 items)
+#	Item	What it involves
+5	IT Admin role	New it_admin role — same data access as admin, plus access to the Logs module. Added to auth, sidebar, role colors everywhere.
+6	Application log viewer	Daily JSON log files in {app_data}/logs/app/, 30-day rotation. Log viewer UI: date picker, level filter, search. Admin + IT Admin only.
+7	Audit log	Separate daily files in {app_data}/logs/audit/, 90-day rotation. Records who/what/when per action. Viewer with filters by user, action type, date range. Admin + IT Admin only.
+
+🟠 v0.7.x — Dockerize it ??
+---
 
 ## Screenshots
 
