@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Users, Building2, Brain, Shield, Plus, Pencil, Trash2, Key,
-  CheckCircle, XCircle, Loader2, Save, AlertTriangle, RefreshCw, Scale
+  CheckCircle, XCircle, Loader2, Save, RefreshCw, Scale,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLegalUpdates } from '../../../contexts/LegalUpdatesContext';
@@ -28,10 +28,12 @@ const OLLAMA_MODELS = [
   'phi3:mini',
 ];
 
+// ─── Edit User Modal ─────────────────────────────────────────────────────────
+
 interface EditUserModalProps {
   user?: User;
   onClose: () => void;
-  onSave: (user: User) => void;
+  onSave: (user: User, password?: string) => void;
 }
 
 function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
@@ -43,6 +45,7 @@ function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
     role: (user?.role || 'wolontariusz') as UserRole,
     active: user?.active ?? true,
   });
+  const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +59,7 @@ function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
       createdAt: user?.createdAt || new Date().toISOString().split('T')[0],
       lastLogin: user?.lastLogin,
     };
-    onSave(saved);
+    onSave(saved, !user ? password : undefined);
     onClose();
   };
 
@@ -67,29 +70,28 @@ function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {user ? t('settings.editUser') : t('settings.addUser')}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            ✕
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('settings.username')} *</label>
-            <input required value={form.username} onChange={e => setForm({...form, username: e.target.value})}
-              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })}
+              disabled={!!user}
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('settings.displayName')} *</label>
-            <input required value={form.displayName} onChange={e => setForm({...form, displayName: e.target.value})}
+            <input required value={form.displayName} onChange={e => setForm({ ...form, displayName: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('settings.email')}</label>
-            <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('settings.role')}</label>
-            <select value={form.role} onChange={e => setForm({...form, role: e.target.value as UserRole})}
+            <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as UserRole })}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="admin">{t('settings.role_admin')}</option>
               <option value="ksiegowa">{t('settings.role_ksiegowa')}</option>
@@ -97,8 +99,17 @@ function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
               <option value="wolontariusz">{t('settings.role_wolontariusz')}</option>
             </select>
           </div>
+          {/* Password only shown when creating a new user */}
+          {!user && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Hasło *</label>
+              <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="min. 8 znaków"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          )}
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="active" checked={form.active} onChange={e => setForm({...form, active: e.target.checked})}
+            <input type="checkbox" id="active" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })}
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
             <label htmlFor="active" className="text-sm text-gray-700 dark:text-gray-300">{t('settings.active')}</label>
           </div>
@@ -116,14 +127,152 @@ function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
   );
 }
 
+// ─── Reset Password Modal ─────────────────────────────────────────────────────
+
+function ResetPasswordModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (password.length < 8) { setError('Hasło musi mieć co najmniej 8 znaków'); return; }
+    if (password !== confirm) { setError('Hasła nie są zgodne'); return; }
+    setLoading(true);
+    try {
+      await invoke('reset_password', { user_id: user.id, new_password: password });
+      setDone(true);
+      setTimeout(onClose, 1500);
+    } catch {
+      setError('Błąd przy zmianie hasła. Spróbuj ponownie.');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Reset hasła</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user.displayName} ({user.username})</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+        </div>
+        {done ? (
+          <div className="p-8 text-center">
+            <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Hasło zostało zmienione</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Nowe hasło *</label>
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="min. 8 znaków"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Powtórz hasło *</label>
+              <input type="password" required value={confirm} onChange={e => setConfirm(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            </div>
+            {error && (
+              <p className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+                <XCircle className="w-3.5 h-3.5 flex-shrink-0" />{error}
+              </p>
+            )}
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={onClose}
+                className="flex-1 py-2 border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                Anuluj
+              </button>
+              <button type="submit" disabled={loading}
+                className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50">
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Zapisuję...</> : <><Key className="w-4 h-4" />Zmień hasło</>}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Module ──────────────────────────────────────────────────────────────
+
 export function SettingsModule() {
   const { t } = useTranslation();
-  const { user: currentUser, allUsers, updateUsers } = useAuth();
+  const { user: currentUser } = useAuth();
   const { updates, urgentCount, loading: legalLoading, dismiss, apply, refresh: refreshLegal } = useLegalUpdates();
+
   const [activeTab, setActiveTab] = useState<SettingsTab>('users');
+
+  // ── Users state ──────────────────────────────────────────────────────────
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [resetNotice, setResetNotice] = useState('');
+  const [resetTarget, setResetTarget] = useState<User | undefined>(undefined);
+  const [showResetModal, setShowResetModal] = useState(false);
+
+  const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    try {
+      const data = await invoke<User[]>('get_users');
+      setUsers(data);
+    } catch {}
+    setLoadingUsers(false);
+  }, []);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  const handleSaveUser = async (user: User, password?: string) => {
+    const isNew = !users.find(u => u.id === user.id);
+    try {
+      if (isNew) {
+        await invoke('create_user', {
+          username: user.username,
+          display_name: user.displayName,
+          email: user.email,
+          role: user.role,
+          password: password || 'changeme',
+        });
+      } else {
+        await invoke('update_user', {
+          id: user.id,
+          username: user.username,
+          display_name: user.displayName,
+          email: user.email,
+          role: user.role,
+          active: user.active,
+        });
+      }
+      await fetchUsers();
+    } catch {}
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (userId === currentUser?.id) return;
+    const u = users.find(u => u.id === userId);
+    if (!u) return;
+    try {
+      await invoke('update_user', {
+        id: u.id,
+        username: u.username,
+        display_name: u.displayName,
+        email: u.email,
+        role: u.role,
+        active: false,
+      });
+      await fetchUsers();
+    } catch {}
+  };
+
+  // ── Org state ────────────────────────────────────────────────────────────
   const [orgForm, setOrgForm] = useState<Organization>({ ...defaultOrg });
   const [orgSaved, setOrgSaved] = useState(false);
 
@@ -132,36 +281,20 @@ export function SettingsModule() {
       if (data) setOrgForm(data);
     }).catch(() => {});
   }, []);
+
+  // ── AI state ─────────────────────────────────────────────────────────────
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [ollamaModel, setOllamaModel] = useState('deepseek-r1:14b');
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected' | 'testing'>('unknown');
-
-  const isAdmin = currentUser?.role === 'admin';
-
-  const handleResetPassword = (userId: string, username: string) => {
-    setResetNotice(`Hasło użytkownika "${username}" zostało zresetowane do 'password'.`);
-    setTimeout(() => setResetNotice(''), 4000);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    if (userId === currentUser?.id) return;
-    updateUsers(allUsers.filter(u => u.id !== userId));
-  };
-
-  const handleSaveUser = (user: User) => {
-    const exists = allUsers.find(u => u.id === user.id);
-    if (exists) {
-      updateUsers(allUsers.map(u => u.id === user.id ? user : u));
-    } else {
-      updateUsers([...allUsers, user]);
-    }
-  };
 
   const handleTestConnection = async () => {
     setConnectionStatus('testing');
     await new Promise(r => setTimeout(r, 1500));
     setConnectionStatus(ollamaUrl.includes('localhost') || ollamaUrl.includes('127.0.0.1') ? 'connected' : 'disconnected');
   };
+
+  // ── Shared ───────────────────────────────────────────────────────────────
+  const isAdmin = currentUser?.role === 'admin';
 
   const roleColors: Record<UserRole, string> = {
     admin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
@@ -234,19 +367,14 @@ export function SettingsModule() {
         })}
       </div>
 
-      {/* Notices */}
-      {resetNotice && (
-        <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg text-emerald-700 dark:text-emerald-400 text-sm">
-          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-          {resetNotice}
-        </div>
-      )}
-
       {/* USER MANAGEMENT TAB */}
       {activeTab === 'users' && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('settings.userManagement')}</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('settings.userManagement')}</h3>
+              {loadingUsers && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+            </div>
             <button
               onClick={() => { setEditingUser(undefined); setShowEditModal(true); }}
               className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
@@ -268,11 +396,12 @@ export function SettingsModule() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {allUsers.map(u => (
+                {users.map(u => (
                   <tr key={u.id} className={clsx('transition-colors', !u.active ? 'opacity-50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30')}>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0', u.id === currentUser?.id ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300')}>
+                        <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
+                          u.id === currentUser?.id ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300')}>
                           {u.displayName.charAt(0)}
                         </div>
                         <div>
@@ -292,8 +421,7 @@ export function SettingsModule() {
                     </td>
                     <td className="px-3 py-3">
                       <span className={clsx('inline-flex items-center gap-1 text-xs font-medium',
-                        u.active ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'
-                      )}>
+                        u.active ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500')}>
                         {u.active ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                         {u.active ? t('common.active') : t('common.inactive')}
                       </span>
@@ -308,7 +436,7 @@ export function SettingsModule() {
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleResetPassword(u.id, u.username)}
+                          onClick={() => { setResetTarget(u); setShowResetModal(true); }}
                           className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
                           title={t('settings.resetPassword')}
                         >
@@ -327,6 +455,13 @@ export function SettingsModule() {
                     </td>
                   </tr>
                 ))}
+                {!loadingUsers && users.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                      Brak użytkowników
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -354,8 +489,8 @@ export function SettingsModule() {
               <div key={field.key} className={field.fullWidth ? 'md:col-span-2' : ''}>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{field.label}</label>
                 <input
-                  value={(orgForm as any)[field.key]}
-                  onChange={e => setOrgForm({...orgForm, [field.key]: e.target.value})}
+                  value={(orgForm as unknown as Record<string, string>)[field.key]}
+                  onChange={e => setOrgForm({ ...orgForm, [field.key]: e.target.value })}
                   className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -392,11 +527,9 @@ export function SettingsModule() {
               <Brain className="w-5 h-5 text-blue-500" />
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('settings.aiSettings')}</h3>
             </div>
-
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-5 text-sm text-blue-800 dark:text-blue-300">
               {t('settings.aiNote')}
             </div>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('settings.ollamaUrl')}</label>
@@ -409,56 +542,38 @@ export function SettingsModule() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('settings.ollamaModel')}</label>
-                <select
-                  value={ollamaModel}
-                  onChange={e => setOllamaModel(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {OLLAMA_MODELS.map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
+                <select value={ollamaModel} onChange={e => setOllamaModel(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {OLLAMA_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
-
               <div className="flex items-center gap-3">
-                <button
-                  onClick={handleTestConnection}
-                  disabled={connectionStatus === 'testing'}
-                  className={clsx(
-                    'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                <button onClick={handleTestConnection} disabled={connectionStatus === 'testing'}
+                  className={clsx('flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
                     connectionStatus === 'testing'
                       ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  )}
-                >
-                  {connectionStatus === 'testing' ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />{t('settings.connectionTesting')}</>
-                  ) : (
-                    <><RefreshCw className="w-4 h-4" />{t('settings.testConnection')}</>
-                  )}
+                      : 'bg-blue-600 hover:bg-blue-700 text-white')}>
+                  {connectionStatus === 'testing'
+                    ? <><Loader2 className="w-4 h-4 animate-spin" />{t('settings.connectionTesting')}</>
+                    : <><RefreshCw className="w-4 h-4" />{t('settings.testConnection')}</>}
                 </button>
-
                 {connectionStatus === 'connected' && (
                   <span className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                    <CheckCircle className="w-4 h-4" />
-                    {t('settings.connectionOk')}
+                    <CheckCircle className="w-4 h-4" />{t('settings.connectionOk')}
                   </span>
                 )}
                 {connectionStatus === 'disconnected' && (
                   <span className="flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400 font-medium">
-                    <XCircle className="w-4 h-4" />
-                    {t('settings.connectionFailed')}
+                    <XCircle className="w-4 h-4" />{t('settings.connectionFailed')}
                   </span>
                 )}
               </div>
-
               {connectionStatus === 'connected' && (
                 <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg p-3 text-sm">
                   <p className="text-emerald-800 dark:text-emerald-300 font-medium">Ollama działa poprawnie</p>
                   <p className="text-emerald-700 dark:text-emerald-400 text-xs mt-1">Model {ollamaModel} dostępny. Klasyfikacja paragonów aktywna.</p>
                 </div>
               )}
-
               {connectionStatus === 'disconnected' && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm">
                   <p className="text-red-800 dark:text-red-300 font-medium">Nie można połączyć z Ollama</p>
@@ -467,7 +582,6 @@ export function SettingsModule() {
               )}
             </div>
           </div>
-
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Prompt klasyfikacji paragonów</h4>
             <pre className="text-xs bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
@@ -504,32 +618,22 @@ Tekst OCR do analizy:
               <Scale className="w-5 h-5 text-blue-500" />
               {t('settings.legalCompliance')}
             </h3>
-            <button
-              onClick={() => refreshLegal()}
-              disabled={legalLoading}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-            >
+            <button onClick={() => refreshLegal()} disabled={legalLoading}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50">
               <RefreshCw className={clsx('w-4 h-4', legalLoading && 'animate-spin')} />
               {t('common.refresh')}
             </button>
           </div>
-
           {updates.length === 0 && !legalLoading && (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-8 text-center">
               <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
               <p className="text-gray-500 dark:text-gray-400 text-sm">{t('settings.legalNoUpdates')}</p>
             </div>
           )}
-
           {updates.map(({ change, days_until, dismissed }) => (
-            <div
-              key={change.id}
-              className={clsx(
-                'rounded-xl border p-5 transition-opacity',
-                severityColors[change.severity] || severityColors.info,
-                dismissed && 'opacity-50'
-              )}
-            >
+            <div key={change.id}
+              className={clsx('rounded-xl border p-5 transition-opacity',
+                severityColors[change.severity] || severityColors.info, dismissed && 'opacity-50')}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -551,15 +655,11 @@ Tekst OCR do analizy:
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{change.description}</p>
                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
                     <span>{t('settings.effectiveDate')}: <strong>{change.effective_date}</strong></span>
-                    <span className={clsx(
-                      'font-semibold',
+                    <span className={clsx('font-semibold',
                       days_until <= 30 ? 'text-red-600 dark:text-red-400' :
                       days_until <= 90 ? 'text-yellow-600 dark:text-yellow-400' :
-                      'text-gray-600 dark:text-gray-400'
-                    )}>
-                      {days_until > 0
-                        ? `${days_until} ${t('settings.daysUntil')}`
-                        : t('settings.pastDue')}
+                      'text-gray-600 dark:text-gray-400')}>
+                      {days_until > 0 ? `${days_until} ${t('settings.daysUntil')}` : t('settings.pastDue')}
                     </span>
                   </div>
                   {change.app_version_required && (
@@ -570,19 +670,15 @@ Tekst OCR do analizy:
                 </div>
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   {change.update_available && (
-                    <button
-                      onClick={() => apply(change.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors"
-                    >
+                    <button onClick={() => apply(change.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors">
                       <CheckCircle className="w-3.5 h-3.5" />
                       {t('settings.applyUpdate')}
                     </button>
                   )}
                   {!dismissed && (
-                    <button
-                      onClick={() => dismiss(change.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                    >
+                    <button onClick={() => dismiss(change.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
                       <XCircle className="w-3.5 h-3.5" />
                       {t('settings.dismiss')}
                     </button>
@@ -594,11 +690,18 @@ Tekst OCR do analizy:
         </div>
       )}
 
+      {/* Modals */}
       {showEditModal && (
         <EditUserModal
           user={editingUser}
           onClose={() => { setShowEditModal(false); setEditingUser(undefined); }}
           onSave={handleSaveUser}
+        />
+      )}
+      {showResetModal && resetTarget && (
+        <ResetPasswordModal
+          user={resetTarget}
+          onClose={() => { setShowResetModal(false); setResetTarget(undefined); }}
         />
       )}
     </div>

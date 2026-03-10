@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart3, FileText, Download, Scale, TrendingUp, Activity, Receipt, ScrollText, ListCollapse,
-  ChevronRight, Info, Loader2
+  ChevronRight, Info, Loader2, Printer,
 } from 'lucide-react';
 import type { ReportType } from '../../../types';
 import clsx from 'clsx';
@@ -24,12 +24,151 @@ const REPORTS: ReportDef[] = [
   { id: 'zestawienie_kosztow', nameKey: 'reports.zestawienie_kosztow', descKey: 'reports.zestawienie_kosztow_desc', legalKey: 'reports.zestawienie_kosztow_legal', icon: ListCollapse },
 ];
 
-// Mock report preview content
+// ─── CSV data (raw arrays, used for both preview tables and CSV export) ───────
+
+const CSV_DATA: Record<ReportType, { headers: string[]; rows: string[][] }> = {
+  bilans: {
+    headers: ['Kod', 'Pozycja', 'Kwota (PLN)'],
+    rows: [
+      ['', 'AKTYWA', ''],
+      ['A', 'Aktywa trwałe', '18450.00'],
+      ['A.I', 'Wartości niematerialne i prawne', '2100.00'],
+      ['A.II', 'Rzeczowe aktywa trwałe', '14850.00'],
+      ['A.III', 'Długoterminowe rozliczenia', '1500.00'],
+      ['B', 'Aktywa obrotowe', '89234.56'],
+      ['B.I', 'Zapasy', '0.00'],
+      ['B.II', 'Należności krótkoterminowe', '22972.50'],
+      ['B.III', 'Inwestycje krótkoterminowe', '0.00'],
+      ['B.IV', 'Środki pieniężne', '66262.06'],
+      ['', 'SUMA AKTYWÓW', '107684.56'],
+      ['', '', ''],
+      ['', 'PASYWA', ''],
+      ['A', 'Fundusz własny', '83234.56'],
+      ['A.I', 'Fundusz statutowy', '50000.00'],
+      ['A.II', 'Wynik finansowy', '33234.56'],
+      ['B', 'Zobowiązania i rezerwy', '24450.00'],
+      ['B.I', 'Rezerwy na zobowiązania', '0.00'],
+      ['B.II', 'Zobowiązania długoterminowe', '0.00'],
+      ['B.III', 'Zobowiązania krótkoterminowe', '24450.00'],
+      ['', 'SUMA PASYWÓW', '107684.56'],
+    ],
+  },
+  rachunek_wynikow: {
+    headers: ['Kod', 'Pozycja', 'Kwota (PLN)'],
+    rows: [
+      ['A', 'Przychody z działalności statutowej', '285200.00'],
+      ['A.1', 'Składki brutto', '12400.00'],
+      ['A.2', 'Inne przychody', '272800.00'],
+      ['B', 'Koszty realizacji zadań statutowych', '198450.00'],
+      ['C', 'Wynik działalności statutowej (A-B)', '86750.00'],
+      ['D', 'Przychody finansowe', '1234.56'],
+      ['E', 'Koszty finansowe', '0.00'],
+      ['F', 'Koszty administracyjne', '54750.00'],
+      ['G', 'Wynik finansowy netto', '33234.56'],
+    ],
+  },
+  przeplywy_pieniezne: {
+    headers: ['Sekcja', 'Pozycja', 'Kwota (PLN)'],
+    rows: [
+      ['A', 'Wynik finansowy netto', '33234.56'],
+      ['A', 'Amortyzacja', '3200.00'],
+      ['A', 'Zmiana stanu należności', '-8500.00'],
+      ['A', 'Zmiana stanu zobowiązań', '5340.00'],
+      ['A', 'Przepływy operacyjne netto', '33274.56'],
+      ['B', 'Zakup środków trwałych', '-3699.00'],
+      ['B', 'Przepływy inwestycyjne netto', '-3699.00'],
+      ['C', 'Otrzymane dotacje', '0.00'],
+      ['C', 'Przepływy finansowe netto', '0.00'],
+      ['', 'Zmiana stanu środków pieniężnych', '29575.56'],
+    ],
+  },
+  deklaracja_vat: {
+    headers: ['Pole', 'Opis', 'Kwota (PLN)'],
+    rows: [
+      ['K_15', 'Dostawa towarów i usług (0%)', '17500.00'],
+      ['K_17', 'Podstawa opodatkowania (8%)', '288.89'],
+      ['K_18', 'Podatek należny (8%)', '23.11'],
+      ['K_19', 'Podstawa opodatkowania (23%)', '302.22'],
+      ['K_20', 'Podatek należny (23%)', '69.51'],
+      ['K_39', 'Nabycia (zakupy z VAT do odliczenia)', '4315.54'],
+      ['K_40', 'Podatek naliczony podlegający odliczeniu', '761.25'],
+      ['P_53', 'VAT do zapłaty', '0.00'],
+      ['P_54', 'VAT do zwrotu', '668.63'],
+    ],
+  },
+  sprawozdanie_roczne: {
+    headers: ['Pole', 'Wartość'],
+    rows: [
+      ['Nazwa organizacji', 'Fundacja Pomocna Dłoń'],
+      ['KRS', '0000123456'],
+      ['NIP', '6761234567'],
+      ['REGON', '120123456'],
+      ['Siedziba', 'ul. Floriańska 15/3, 31-019 Kraków'],
+      ['Rok obrotowy', '01.01.2025 — 31.12.2025'],
+      ['Obowiązek sprawozdawczy', 'Art. 45 UoRach + art. 23 UoDPPioW'],
+      ['Termin złożenia', '15 marca roku następnego'],
+    ],
+  },
+  zestawienie_kosztow: {
+    headers: ['Kategoria', 'Styczeń', 'Luty', 'Marzec', 'Łącznie'],
+    rows: [
+      ['Wynagrodzenia', '41234', '41234', '41234', '123702'],
+      ['ZUS pracodawca', '8934', '8934', '8934', '26802'],
+      ['Biuro', '2100', '1890', '2450', '6440'],
+      ['Podróże', '1230', '980', '1560', '3770'],
+      ['Catering', '890', '1100', '780', '2770'],
+      ['Sprzęt', '0', '0', '3699', '3699'],
+      ['Usługi', '3450', '4120', '3890', '11460'],
+      ['Inne', '1200', '800', '950', '2950'],
+      ['RAZEM', '59038', '59058', '63497', '181593'],
+    ],
+  },
+};
+
+// ─── Export helpers ────────────────────────────────────────────────────────────
+
+function buildCSV(reportId: ReportType, dateFrom: string, dateTo: string, orgName: string): string {
+  const { headers, rows } = CSV_DATA[reportId];
+  const reportLabel = reportId.replace(/_/g, ' ').toUpperCase();
+  const meta = [
+    [`# ${reportLabel}`],
+    [`# Organizacja: ${orgName}`],
+    [`# Okres: ${dateFrom} — ${dateTo}`],
+    [`# Wygenerowano: ${new Date().toLocaleString('pl-PL')}`],
+    [],
+  ];
+  const escape = (v: string) => v.includes(',') || v.includes('"') || v.includes('\n') ? `"${v.replace(/"/g, '""')}"` : v;
+  const lines = [
+    ...meta.map(r => r.join(',')),
+    headers.map(escape).join(','),
+    ...rows.map(r => r.map(escape).join(',')),
+  ];
+  return lines.join('\r\n');
+}
+
+function downloadCSV(content: string, filename: string) {
+  const bom = '\uFEFF'; // UTF-8 BOM so Excel opens Polish characters correctly
+  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Preview components (same data as CSV_DATA) ───────────────────────────────
+
 const MOCK_PREVIEWS: Record<ReportType, React.ReactNode> = {
   bilans: (
     <table className="w-full text-sm">
       <thead>
-        <tr className="bg-gray-50 dark:bg-gray-700/50"><th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300" colSpan={2}>AKTYWA</th><th className="text-right px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">PLN</th></tr>
+        <tr className="bg-gray-50 dark:bg-gray-700/50">
+          <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300" colSpan={2}>AKTYWA</th>
+          <th className="text-right px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">PLN</th>
+        </tr>
       </thead>
       <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
         {[
@@ -52,7 +191,10 @@ const MOCK_PREVIEWS: Record<ReportType, React.ReactNode> = {
         ))}
       </tbody>
       <thead>
-        <tr className="bg-gray-50 dark:bg-gray-700/50"><th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300" colSpan={2}>PASYWA</th><th className="text-right px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">PLN</th></tr>
+        <tr className="bg-gray-50 dark:bg-gray-700/50">
+          <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300" colSpan={2}>PASYWA</th>
+          <th className="text-right px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">PLN</th>
+        </tr>
       </thead>
       <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
         {[
@@ -91,7 +233,12 @@ const MOCK_PREVIEWS: Record<ReportType, React.ReactNode> = {
           <tr key={i} className={clsx(row.highlight ? 'bg-emerald-50 dark:bg-emerald-900/20' : row.bold ? 'bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/20')}>
             <td className="px-4 py-2 text-gray-500 dark:text-gray-400 w-12 font-mono text-xs">{row.code}</td>
             <td className="px-2 py-2 text-gray-900 dark:text-white" style={{ fontWeight: row.bold ? 700 : 400 }}>{row.name}</td>
-            <td className={clsx('px-4 py-2 text-right tabular-nums font-medium', row.highlight ? 'text-emerald-700 dark:text-emerald-400 font-bold' : row.income ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>{row.income !== undefined ? (row.income ? '+' : '-') : ''}{row.val}</td>
+            <td className={clsx('px-4 py-2 text-right tabular-nums font-medium',
+              row.highlight ? 'text-emerald-700 dark:text-emerald-400 font-bold' :
+              row.income ? 'text-emerald-600 dark:text-emerald-400' :
+              'text-red-600 dark:text-red-400')}>
+              {row.income !== undefined ? (row.income ? '+' : '-') : ''}{row.val}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -122,7 +269,8 @@ const MOCK_PREVIEWS: Record<ReportType, React.ReactNode> = {
             const isTotal = name.includes('netto');
             const isNeg = val.startsWith('-');
             return (
-              <div key={i} className={clsx('flex justify-between px-4 py-2', isTotal ? 'font-bold bg-blue-50 dark:bg-blue-900/20 border-t border-gray-200 dark:border-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700/20')}>
+              <div key={i} className={clsx('flex justify-between px-4 py-2',
+                isTotal ? 'font-bold bg-blue-50 dark:bg-blue-900/20 border-t border-gray-200 dark:border-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700/20')}>
                 <span className="text-gray-700 dark:text-gray-300">{name}</span>
                 <span className={clsx('tabular-nums', isNeg ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400')}>{val} PLN</span>
               </div>
@@ -232,6 +380,8 @@ const MOCK_PREVIEWS: Record<ReportType, React.ReactNode> = {
   ),
 };
 
+// ─── Module ───────────────────────────────────────────────────────────────────
+
 export function ReportsModule() {
   const { t } = useTranslation();
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
@@ -241,6 +391,11 @@ export function ReportsModule() {
   const [generated, setGenerated] = useState(false);
   const [notice, setNotice] = useState('');
 
+  const showNotice = (msg: string) => {
+    setNotice(msg);
+    setTimeout(() => setNotice(''), 3000);
+  };
+
   const handleGenerate = async () => {
     if (!selectedReport) return;
     setGenerating(true);
@@ -248,8 +403,21 @@ export function ReportsModule() {
     await new Promise(r => setTimeout(r, 1200));
     setGenerating(false);
     setGenerated(true);
-    setNotice(t('reports.reportGenerated'));
-    setTimeout(() => setNotice(''), 3000);
+    showNotice(t('reports.reportGenerated'));
+  };
+
+  const handleExportCSV = () => {
+    if (!selectedReport) return;
+    const csv = buildCSV(selectedReport, dateFrom, dateTo, 'Fundacja Pomocna Dłoń');
+    const filename = `${selectedReport}_${dateFrom}_${dateTo}.csv`;
+    downloadCSV(csv, filename);
+    showNotice('Plik CSV zapisany');
+  };
+
+  const handleExportPDF = () => {
+    // Opens system print dialog — on macOS/Windows includes "Save as PDF" option.
+    // The Tauri webview honours window.print() and sends to OS print subsystem.
+    window.print();
   };
 
   const selectedDef = REPORTS.find(r => r.id === selectedReport);
@@ -297,7 +465,7 @@ export function ReportsModule() {
             </div>
           </div>
 
-          {/* Date range */}
+          {/* Date range + actions */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 space-y-3">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('reports.dateRange')}</h3>
             <div>
@@ -320,22 +488,26 @@ export function ReportsModule() {
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
               )}
             >
-              {generating ? (
-                <><Loader2 className="w-4 h-4 animate-spin" />{t('reports.generatingReport')}</>
-              ) : (
-                <><BarChart3 className="w-4 h-4" />{t('reports.generate')}</>
-              )}
+              {generating
+                ? <><Loader2 className="w-4 h-4 animate-spin" />{t('reports.generatingReport')}</>
+                : <><BarChart3 className="w-4 h-4" />{t('reports.generate')}</>}
             </button>
 
             {generated && (
-              <div className="flex gap-2">
-                <button className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleExportCSV}
+                  className="flex items-center justify-center gap-1.5 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
                   <Download className="w-3.5 h-3.5" />
-                  PDF
+                  CSV
                 </button>
-                <button className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <Download className="w-3.5 h-3.5" />
-                  Excel
+                <button
+                  onClick={handleExportPDF}
+                  className="flex items-center justify-center gap-1.5 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  PDF
                 </button>
               </div>
             )}
