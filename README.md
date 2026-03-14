@@ -97,7 +97,7 @@
 No Rust required. Runs entirely in-browser with mock data.
 
 ```bash
-git clone https://github.com/autisticcaveman/krakow-ngo-accounting
+git clone https://github.com/HuggingBunny/Poland-NGO-Finanse
 cd krakow-ngo-accounting
 npm install
 npm run dev

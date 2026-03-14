@@ -4,7 +4,7 @@ use chrono::{NaiveDate, Utc};
 use rusqlite::params;
 use tauri::State;
 
-const FEED_URL: &str = "https://raw.githubusercontent.com/autisticcaveman/krakow-ngo-accounting/main/legal-updates.json";
+const FEED_URL: &str = "https://raw.githubusercontent.com/HuggingBunny/Poland-NGO-Finanse/main/legal-updates.json";
 
 #[tauri::command]
 pub fn get_legal_updates(db: State<DbState>) -> Vec<LegalChangeWithStatus> {
