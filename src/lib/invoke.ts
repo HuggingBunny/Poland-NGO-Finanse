@@ -19,12 +19,80 @@ import {
 } from '../data/mockData';
 import type { Receipt, Bill, Invoice, Employee, User, Organization, Payslip } from '../types';
 
+// ─── New types for mock state ─────────────────────────────────────────────────
+interface ServiceProvider {
+  id: string;
+  name: string;
+  nip?: string;
+  krs?: string;
+  regon?: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+  email?: string;
+  phone?: string;
+  bank_account?: string;
+  category?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AdminLog {
+  id: string;
+  level: string;
+  module: string;
+  message: string;
+  user_id?: string;
+  metadata?: string;
+  created_at: string;
+}
+
+interface BackupConfig {
+  id: string;
+  name: string;
+  backup_type: string;
+  path: string;
+  enabled: boolean;
+  last_backup_at?: string;
+  created_at: string;
+}
+
+interface EmailSettings {
+  smtp_host: string;
+  smtp_port: string;
+  smtp_user: string;
+  smtp_pass: string;
+  from_address: string;
+  from_name: string;
+  enabled: boolean;
+}
+
+interface MonthlyLedger {
+  id: string;
+  month: string;
+  file_path: string;
+  generated_at: string;
+  entry_count: number;
+}
+
 // In-memory state for web mode (resets on page refresh — expected in dev)
 let _receipts: Receipt[] = [...mockReceipts];
 let _bills: Bill[] = [...mockBills];
 let _invoices: Invoice[] = [...mockInvoices];
 let _employees: Employee[] = [...mockEmployees];
 let _users: User[] = [...mockUsers];
+let _serviceProviders: ServiceProvider[] = [];
+let _adminLogs: AdminLog[] = [
+  { id: 'log1', level: 'info', module: 'system', message: 'Application started', created_at: new Date().toISOString() },
+];
+let _backupConfigs: BackupConfig[] = [];
+let _emailSettings: EmailSettings = {
+  smtp_host: '', smtp_port: '587', smtp_user: '', smtp_pass: '',
+  from_address: '', from_name: '', enabled: false,
+};
+let _monthlyLedgers: MonthlyLedger[] = [];
 
 async function mockInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   // Simulate async
@@ -206,6 +274,112 @@ async function mockInvoke<T>(command: string, args?: Record<string, unknown>): P
         overdue_bills: 1,
       } as T;
     }
+
+    // Service Providers
+    case 'get_service_providers': return _serviceProviders as T;
+    case 'search_service_provider': {
+      const { name } = args as { name: string };
+      return _serviceProviders.filter(p =>
+        p.name.toLowerCase().includes(name.toLowerCase())
+      ) as T;
+    }
+    case 'upsert_service_provider': {
+      const p = args as Record<string, unknown>;
+      const id = (p.id as string) || `sp${Date.now()}`;
+      const now = new Date().toISOString();
+      const existing = _serviceProviders.find(s => s.id === id);
+      if (existing) {
+        _serviceProviders = _serviceProviders.map(s =>
+          s.id === id ? { ...s, ...p, id, updated_at: now } : s
+        );
+      } else {
+        _serviceProviders = [..._serviceProviders, { ...p, id, created_at: now, updated_at: now } as ServiceProvider];
+      }
+      return id as T;
+    }
+    case 'delete_service_provider': {
+      _serviceProviders = _serviceProviders.filter(s => s.id !== (args as { id: string }).id);
+      return null as T;
+    }
+
+    // Ollama
+    case 'process_receipt_with_ollama': {
+      // Return a mock Ollama result for web dev mode
+      return {
+        vendor_name: 'Demo Vendor',
+        date: new Date().toISOString().split('T')[0],
+        amount_gross: 123.00,
+        amount_net: 100.00,
+        vat_rate: 23,
+        vat_amount: 23.00,
+        category: 'biuro',
+        description: 'Mock AI receipt processing (web dev mode)',
+        invoice_number: null,
+        nip: null,
+        confidence: 0.85,
+        reasoning: 'Web dev mode — no actual Ollama connection',
+        raw_response: '{}',
+        model_used: 'mock',
+      } as T;
+    }
+    case 'test_ollama_connection': return false as T;
+
+    // Admin Logs
+    case 'get_admin_logs': return _adminLogs as T;
+    case 'add_admin_log': {
+      const p = args as { level?: string; module: string; message: string; user_id?: string; metadata?: string };
+      const log: AdminLog = {
+        id: `log${Date.now()}`,
+        level: p.level || 'info',
+        module: p.module,
+        message: p.message,
+        user_id: p.user_id,
+        metadata: p.metadata,
+        created_at: new Date().toISOString(),
+      };
+      _adminLogs = [log, ..._adminLogs];
+      return log.id as T;
+    }
+    case 'cleanup_old_logs': {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const before = _adminLogs.length;
+      _adminLogs = _adminLogs.filter(l => l.created_at >= cutoff);
+      return (before - _adminLogs.length) as T;
+    }
+
+    // Backup
+    case 'get_backup_configs': return _backupConfigs as T;
+    case 'upsert_backup_config': {
+      const p = args as Record<string, unknown>;
+      const id = (p.id as string) || `bc${Date.now()}`;
+      const now = new Date().toISOString();
+      const existing = _backupConfigs.find(c => c.id === id);
+      if (existing) {
+        _backupConfigs = _backupConfigs.map(c => c.id === id ? { ...c, ...p, id } : c);
+      } else {
+        _backupConfigs = [..._backupConfigs, { ...p, id, enabled: true, created_at: now } as BackupConfig];
+      }
+      return id as T;
+    }
+    case 'delete_backup_config': {
+      _backupConfigs = _backupConfigs.filter(c => c.id !== (args as { id: string }).id);
+      return null as T;
+    }
+    case 'run_backup': return '/mock/backup/ngo-finanse-backup-20260314_120000.db' as T;
+    case 'list_backups': return [] as T;
+    case 'restore_backup': return null as T;
+
+    // Email
+    case 'get_email_settings': return _emailSettings as T;
+    case 'save_email_settings': {
+      _emailSettings = { ..._emailSettings, ...(args as Partial<EmailSettings>) };
+      return null as T;
+    }
+
+    // Ledger
+    case 'generate_monthly_ledger': return '/mock/ledgers/ledger-2026-02.csv' as T;
+    case 'get_monthly_ledgers': return _monthlyLedgers as T;
+    case 'check_monthly_rollover': return null as T;
 
     default:
       console.warn(`[invoke] Unknown command in web mode: ${command}`);

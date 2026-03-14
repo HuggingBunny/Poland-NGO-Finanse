@@ -191,6 +191,46 @@ fn run_migrations(conn: &Connection) -> Result<()> {
                 dismissed_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS service_providers (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                nip TEXT, krs TEXT, regon TEXT,
+                address TEXT, city TEXT, postal_code TEXT,
+                country TEXT DEFAULT 'PL',
+                email TEXT, phone TEXT, bank_account TEXT,
+                category TEXT, notes TEXT,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS email_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+
+            CREATE TABLE IF NOT EXISTS admin_logs (
+                id TEXT PRIMARY KEY,
+                level TEXT NOT NULL DEFAULT 'info',
+                module TEXT NOT NULL,
+                message TEXT NOT NULL,
+                user_id TEXT, metadata TEXT,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS backup_configs (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                backup_type TEXT NOT NULL,
+                path TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                last_backup_at TEXT,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS monthly_ledger (
+                id TEXT PRIMARY KEY,
+                month TEXT NOT NULL UNIQUE,
+                file_path TEXT NOT NULL,
+                generated_at TEXT NOT NULL,
+                entry_count INTEGER DEFAULT 0
+            );
+
             INSERT OR IGNORE INTO schema_version (version) VALUES (1);
         ")?;
 

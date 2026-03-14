@@ -11,7 +11,8 @@
     "invoicing": "Invoicing",
     "payroll": "Payroll",
     "reports": "Reports",
-    "settings": "Settings"
+    "settings": "Settings",
+    "serviceProviders": "Service Providers"
   },
   "auth": {
     "login": "Sign In",
@@ -129,8 +130,11 @@
     "status_zaklasyfikowany": "Classified",
     "status_zatwierdzony": "Approved",
     "status_odrzucony": "Rejected",
-    "filesUploaded": "Files uploaded successfully (simulation)",
-    "processingOcr": "Processing OCR..."
+    "filesUploaded": "Files uploaded successfully",
+    "processingOcr": "Processing OCR...",
+    "processingWithAI": "Processing with AI...",
+    "uploadSuccess": "Receipt processed and saved",
+    "uploadError": "Failed to process receipt"
   },
   "bills": {
     "title": "Incoming Bills",
@@ -344,6 +348,89 @@
     "affects_payroll": "Payroll",
     "affects_reports": "Reports",
     "affects_receipts": "Receipts"
+  },
+  "serviceProviders": {
+    "title": "Service Providers",
+    "addNew": "Add Provider",
+    "edit": "Edit Provider",
+    "delete": "Delete Provider",
+    "confirmDelete": "Are you sure?",
+    "noProviders": "No service providers found",
+    "name": "Name",
+    "nip": "NIP",
+    "krs": "KRS",
+    "regon": "REGON",
+    "address": "Address",
+    "city": "City",
+    "postalCode": "Postal Code",
+    "country": "Country",
+    "email": "Email",
+    "phone": "Phone",
+    "bankAccount": "Bank Account",
+    "category": "Category",
+    "notes": "Notes",
+    "newProviderDetected": "New Provider Detected",
+    "newProviderMessage": "This vendor was not found in your service providers list. Would you like to add them?",
+    "createNew": "Create New Provider",
+    "mapToExisting": "Map to Existing Provider",
+    "skipForNow": "Skip for Now",
+    "categories": {
+      "biuro": "Office",
+      "catering": "Catering",
+      "it": "IT / Equipment",
+      "usługi": "Services",
+      "transport": "Transport",
+      "inne": "Other"
+    }
+  },
+  "email": {
+    "title": "Email Settings",
+    "smtpHost": "SMTP Host",
+    "smtpPort": "SMTP Port",
+    "username": "Username",
+    "password": "Password",
+    "fromAddress": "From Address",
+    "fromName": "From Name",
+    "enabled": "Enable Email Integration",
+    "savedSuccess": "Email settings saved",
+    "futureNote": "Email sending will be enabled in a future update. You can configure your SMTP settings now so they are ready when the feature is released."
+  },
+  "backups": {
+    "title": "Backups",
+    "addDestination": "Add Backup Destination",
+    "name": "Name",
+    "type": "Type",
+    "path": "Path",
+    "lastBackup": "Last Backup",
+    "never": "Never",
+    "runNow": "Back Up Now",
+    "viewBackups": "View Files",
+    "restore": "Restore",
+    "confirmRestore": "This will overwrite the current database. Continue?",
+    "backupSuccess": "Backup created",
+    "restoreSuccess": "Restore complete. Please restart the application.",
+    "noBackups": "No backup files found in this location",
+    "noConfigs": "No backup destinations configured",
+    "size": "Size",
+    "created": "Created",
+    "types": {
+      "local": "Local Folder",
+      "usb": "USB Drive",
+      "smb": "Network Share (SMB)",
+      "google_drive": "Google Drive (manual)"
+    },
+    "googleDriveNote": "Google Drive integration requires manual sync. Configure a local path that is synced by the Google Drive desktop app."
+  },
+  "logs": {
+    "title": "System Logs",
+    "level": "Level",
+    "module": "Module",
+    "message": "Message",
+    "timestamp": "Timestamp",
+    "allLevels": "All Levels",
+    "cleanup": "Cleanup (30+ days)",
+    "cleanupResult": "Deleted entries",
+    "noLogs": "No log entries found"
   },
   "roles": {
     "admin": "Administrator",

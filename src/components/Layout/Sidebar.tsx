@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { UserRole } from '../../types';
 import clsx from 'clsx';
 
-type Module = 'dashboard' | 'receipts' | 'bills' | 'invoicing' | 'payroll' | 'reports' | 'settings';
+type Module = 'dashboard' | 'receipts' | 'bills' | 'invoicing' | 'payroll' | 'reports' | 'settings' | 'service-providers';
 
 interface SidebarProps {
   activeModule: Module;
@@ -36,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', allowedRoles: ['admin', 'ksiegowa', 'dyrektor', 'wolontariusz'] },
   { id: 'receipts', icon: Receipt, labelKey: 'nav.receipts', allowedRoles: ['admin', 'ksiegowa', 'wolontariusz'] },
   { id: 'bills', icon: FileText, labelKey: 'nav.bills', allowedRoles: ['admin', 'ksiegowa'] },
+  { id: 'service-providers', icon: Building2, labelKey: 'nav.serviceProviders', allowedRoles: ['admin', 'ksiegowa'] },
   { id: 'invoicing', icon: FilePlus, labelKey: 'nav.invoicing', allowedRoles: ['admin', 'ksiegowa'] },
   { id: 'payroll', icon: Users, labelKey: 'nav.payroll', allowedRoles: ['admin', 'ksiegowa'] },
   { id: 'reports', icon: BarChart3, labelKey: 'nav.reports', allowedRoles: ['admin', 'ksiegowa', 'dyrektor'] },

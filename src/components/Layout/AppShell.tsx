@@ -8,11 +8,12 @@ import { InvoicingModule } from '../modules/Invoicing/InvoicingModule';
 import { PayrollModule } from '../modules/Payroll/PayrollModule';
 import { ReportsModule } from '../modules/Reports/ReportsModule';
 import { SettingsModule } from '../modules/Settings/SettingsModule';
+import { ServiceProvidersModule } from '../modules/ServiceProviders/ServiceProvidersModule';
 import { ChangePasswordModal } from '../Auth/ChangePasswordModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { isTauri } from '../../lib/invoke';
 
-type Module = 'dashboard' | 'receipts' | 'bills' | 'invoicing' | 'payroll' | 'reports' | 'settings';
+type Module = 'dashboard' | 'receipts' | 'bills' | 'invoicing' | 'payroll' | 'reports' | 'settings' | 'service-providers';
 
 const MODULE_TITLE_KEYS: Record<Module, string> = {
   dashboard: 'nav.dashboard',
@@ -22,6 +23,7 @@ const MODULE_TITLE_KEYS: Record<Module, string> = {
   payroll: 'nav.payroll',
   reports: 'nav.reports',
   settings: 'nav.settings',
+  'service-providers': 'nav.serviceProviders',
 };
 
 export function AppShell() {
@@ -57,6 +59,7 @@ export function AppShell() {
       case 'payroll': return <PayrollModule />;
       case 'reports': return <ReportsModule />;
       case 'settings': return <SettingsModule />;
+      case 'service-providers': return <ServiceProvidersModule />;
       default: return <DashboardModule />;
     }
   };

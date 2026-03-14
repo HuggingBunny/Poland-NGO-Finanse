@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Upload, FileText, CheckCircle, Clock, XCircle, AlertCircle,
-  Brain, ChevronRight, Download, Filter, Search, Check, X, Loader2
+  Brain, ChevronRight, Download, Filter, Search, Check, X, Loader2,
+  Building2, Plus,
 } from 'lucide-react';
 import { invoke } from '../../../lib/invoke';
 import type { Receipt, ReceiptStatus } from '../../../types';
+import { useAuth } from '../../../contexts/AuthContext';
 import clsx from 'clsx';
 
 function formatPLN(amount: number) {
@@ -43,16 +45,97 @@ function ConfidenceBar({ confidence }: { confidence: number }) {
   );
 }
 
+// ─── New Provider Modal ───────────────────────────────────────────────────────
+
+interface NewProviderModalProps {
+  vendorName: string;
+  onClose: () => void;
+  onCreate: (name: string) => void;
+  onMap: () => void;
+  onSkip: () => void;
+}
+
+function NewProviderModal({ vendorName, onClose, onCreate, onMap, onSkip }: NewProviderModalProps) {
+  const { t } = useTranslation();
+  const [creating, setCreating] = useState(false);
+
+  const handleCreate = async () => {
+    setCreating(true);
+    await onCreate(vendorName);
+    setCreating(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <Building2 className="w-5 h-5 text-blue-500" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('serviceProviders.newProviderDetected')}
+            </h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('serviceProviders.newProviderMessage')}
+          </p>
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-4 py-3">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{vendorName}</p>
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {t('serviceProviders.createNew')}
+            </button>
+            <button
+              onClick={() => { onMap(); onClose(); }}
+              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              {t('serviceProviders.mapToExisting')}
+            </button>
+            <button
+              onClick={() => { onSkip(); onClose(); }}
+              className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
+            >
+              {t('serviceProviders.skipForNow')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Module ──────────────────────────────────────────────────────────────
+
 export function ReceiptsModule() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploadNotice, setUploadNotice] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const [processing, setProcessing] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // New provider modal state
+  const [newProviderModal, setNewProviderModal] = useState<{ show: boolean; vendorName: string }>({
+    show: false,
+    vendorName: '',
+  });
 
   useEffect(() => {
     invoke<Receipt[]>('get_receipts').then(data => {
@@ -61,22 +144,85 @@ export function ReceiptsModule() {
     }).catch(() => setLoading(false));
   }, []);
 
+  const processFile = async (file: File) => {
+    setProcessing(true);
+    setUploadError('');
+    setUploadNotice('');
+
+    try {
+      // Get file path from Tauri-injected property
+      const filePath = (file as unknown as { path?: string }).path || file.name;
+
+      // Call Ollama to process the receipt
+      const result = await invoke<{
+        vendor_name: string;
+        date: string;
+        amount_gross: number;
+        amount_net: number;
+        vat_rate: number;
+        vat_amount: number;
+        category: string;
+        description: string;
+        invoice_number: string | null;
+        nip: string | null;
+        confidence: number;
+        reasoning: string;
+        raw_response: string;
+        model_used: string;
+      }>('process_receipt_with_ollama', { filePath });
+
+      // Save the receipt
+      const receiptId = await invoke<string>('upsert_receipt', {
+        date: result.date,
+        vendor: result.vendor_name,
+        description: result.description || file.name,
+        amount_gross: result.amount_gross,
+        amount_net: result.amount_net,
+        vat_rate: Math.round(result.vat_rate),
+        vat_amount: result.vat_amount,
+        category: result.category,
+        status: 'zaklasyfikowany',
+        vat_eligible: true,
+        file_name: file.name,
+        uploaded_by: user?.username || 'unknown',
+      });
+
+      // Refresh receipt list
+      const updatedReceipts = await invoke<Receipt[]>('get_receipts');
+      setReceipts(updatedReceipts ?? []);
+
+      setUploadNotice(t('receipts.uploadSuccess'));
+      setTimeout(() => setUploadNotice(''), 4000);
+
+      // Check if vendor exists as a service provider
+      const matches = await invoke<unknown[]>('search_service_provider', { name: result.vendor_name });
+      if (!matches || matches.length === 0) {
+        setNewProviderModal({ show: true, vendorName: result.vendor_name });
+      }
+    } catch (err) {
+      setUploadError(`${t('receipts.uploadError')}: ${String(err)}`);
+      setTimeout(() => setUploadError(''), 6000);
+    }
+
+    setProcessing(false);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      setUploadNotice(`${t('receipts.filesUploaded')} (${files.map(f => f.name).join(', ')})`);
-      setTimeout(() => setUploadNotice(''), 4000);
+      processFile(files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      setUploadNotice(`${t('receipts.filesUploaded')} (${files.map(f => f.name).join(', ')})`);
-      setTimeout(() => setUploadNotice(''), 4000);
+      processFile(files[0]);
     }
+    // Reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleApprove = (id: string) => {
@@ -91,6 +237,10 @@ export function ReceiptsModule() {
       setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'odrzucony' as ReceiptStatus } : r));
       if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'odrzucony' } : null);
     });
+  };
+
+  const handleCreateProvider = async (name: string) => {
+    await invoke('upsert_service_provider', { name });
   };
 
   const filtered = receipts.filter(r => {
@@ -108,28 +258,45 @@ export function ReceiptsModule() {
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !processing && fileInputRef.current?.click()}
         className={clsx(
-          'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all',
+          'border-2 border-dashed rounded-xl p-8 text-center transition-all',
+          processing ? 'cursor-not-allowed opacity-75' : 'cursor-pointer',
           dragOver
             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
             : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
         )}
       >
-        <input ref={fileInputRef} type="file" multiple accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={handleFileSelect} />
-        <Upload className={clsx('w-10 h-10 mx-auto mb-3', dragOver ? 'text-blue-500' : 'text-gray-400')} />
-        <p className="text-base font-medium text-gray-700 dark:text-gray-300">{t('receipts.uploadZone')}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('receipts.uploadZoneSub')}</p>
-        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400">
-          <Brain className="w-3.5 h-3.5 text-blue-500" />
-          {t('receipts.aiPromptText')}
-        </div>
+        <input ref={fileInputRef} type="file" multiple accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={handleFileSelect} disabled={processing} />
+        {processing ? (
+          <>
+            <Loader2 className="w-10 h-10 mx-auto mb-3 text-blue-500 animate-spin" />
+            <p className="text-base font-medium text-blue-700 dark:text-blue-300">{t('receipts.processingWithAI')}</p>
+          </>
+        ) : (
+          <>
+            <Upload className={clsx('w-10 h-10 mx-auto mb-3', dragOver ? 'text-blue-500' : 'text-gray-400')} />
+            <p className="text-base font-medium text-gray-700 dark:text-gray-300">{t('receipts.uploadZone')}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('receipts.uploadZoneSub')}</p>
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400">
+              <Brain className="w-3.5 h-3.5 text-blue-500" />
+              {t('receipts.aiPromptText')}
+            </div>
+          </>
+        )}
       </div>
 
       {uploadNotice && (
         <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg text-emerald-700 dark:text-emerald-400 text-sm">
           <CheckCircle className="w-4 h-4 flex-shrink-0" />
           {uploadNotice}
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          <XCircle className="w-4 h-4 flex-shrink-0" />
+          {uploadError}
         </div>
       )}
 
@@ -350,6 +517,17 @@ export function ReceiptsModule() {
           )}
         </div>
       </div>
+
+      {/* New Provider Modal */}
+      {newProviderModal.show && (
+        <NewProviderModal
+          vendorName={newProviderModal.vendorName}
+          onClose={() => setNewProviderModal({ show: false, vendorName: '' })}
+          onCreate={handleCreateProvider}
+          onMap={() => {/* Future: open map-to-existing UI */}}
+          onSkip={() => {}}
+        />
+      )}
     </div>
   );
 }

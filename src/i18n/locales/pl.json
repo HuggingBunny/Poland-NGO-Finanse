@@ -11,7 +11,8 @@
     "invoicing": "Fakturowanie",
     "payroll": "Kadry i płace",
     "reports": "Raporty",
-    "settings": "Ustawienia"
+    "settings": "Ustawienia",
+    "serviceProviders": "Dostawcy usług"
   },
   "auth": {
     "login": "Zaloguj się",
@@ -129,8 +130,11 @@
     "status_zaklasyfikowany": "Zaklasyfikowany",
     "status_zatwierdzony": "Zatwierdzony",
     "status_odrzucony": "Odrzucony",
-    "filesUploaded": "Pliki przesłane pomyślnie (symulacja)",
-    "processingOcr": "Przetwarzanie OCR..."
+    "filesUploaded": "Pliki przesłane pomyślnie",
+    "processingOcr": "Przetwarzanie OCR...",
+    "processingWithAI": "Przetwarzanie przez AI...",
+    "uploadSuccess": "Paragon przetworzony i zapisany",
+    "uploadError": "Nie udało się przetworzyć paragonu"
   },
   "bills": {
     "title": "Faktury kosztowe",
@@ -344,6 +348,89 @@
     "affects_payroll": "Kadry i płace",
     "affects_reports": "Raporty",
     "affects_receipts": "Paragony"
+  },
+  "serviceProviders": {
+    "title": "Dostawcy usług",
+    "addNew": "Dodaj dostawcę",
+    "edit": "Edytuj dostawcę",
+    "delete": "Usuń dostawcę",
+    "confirmDelete": "Jesteś pewien?",
+    "noProviders": "Brak dostawców usług",
+    "name": "Nazwa",
+    "nip": "NIP",
+    "krs": "KRS",
+    "regon": "REGON",
+    "address": "Adres",
+    "city": "Miasto",
+    "postalCode": "Kod pocztowy",
+    "country": "Kraj",
+    "email": "Email",
+    "phone": "Telefon",
+    "bankAccount": "Nr konta bankowego",
+    "category": "Kategoria",
+    "notes": "Uwagi",
+    "newProviderDetected": "Nowy dostawca wykryty",
+    "newProviderMessage": "Tego sprzedawcy nie ma na liście dostawców. Chcesz go dodać?",
+    "createNew": "Dodaj nowego dostawcę",
+    "mapToExisting": "Przypisz do istniejącego",
+    "skipForNow": "Pomiń na razie",
+    "categories": {
+      "biuro": "Biuro",
+      "catering": "Catering",
+      "it": "IT / Sprzęt",
+      "usługi": "Usługi",
+      "transport": "Transport",
+      "inne": "Inne"
+    }
+  },
+  "email": {
+    "title": "Ustawienia poczty e-mail",
+    "smtpHost": "Serwer SMTP",
+    "smtpPort": "Port SMTP",
+    "username": "Nazwa użytkownika",
+    "password": "Hasło",
+    "fromAddress": "Adres nadawcy",
+    "fromName": "Nazwa nadawcy",
+    "enabled": "Włącz integrację e-mail",
+    "savedSuccess": "Ustawienia poczty zapisane",
+    "futureNote": "Wysyłanie wiadomości e-mail zostanie włączone w przyszłej aktualizacji. Możesz teraz skonfigurować ustawienia SMTP, aby były gotowe po udostępnieniu funkcji."
+  },
+  "backups": {
+    "title": "Kopie zapasowe",
+    "addDestination": "Dodaj miejsce kopii",
+    "name": "Nazwa",
+    "type": "Typ",
+    "path": "Ścieżka",
+    "lastBackup": "Ostatnia kopia",
+    "never": "Nigdy",
+    "runNow": "Wykonaj kopię",
+    "viewBackups": "Pokaż pliki",
+    "restore": "Przywróć",
+    "confirmRestore": "To zastąpi aktualną bazę danych. Kontynuować?",
+    "backupSuccess": "Kopia zapasowa utworzona",
+    "restoreSuccess": "Przywracanie zakończone. Uruchom ponownie aplikację.",
+    "noBackups": "Brak plików kopii w tym miejscu",
+    "noConfigs": "Brak skonfigurowanych miejsc kopii zapasowych",
+    "size": "Rozmiar",
+    "created": "Utworzono",
+    "types": {
+      "local": "Folder lokalny",
+      "usb": "Pendrive / USB",
+      "smb": "Zasób sieciowy (SMB)",
+      "google_drive": "Google Drive (ręcznie)"
+    },
+    "googleDriveNote": "Integracja z Google Drive wymaga ręcznej synchronizacji. Wskaż folder lokalny synchronizowany przez aplikację desktopową Google Drive."
+  },
+  "logs": {
+    "title": "Logi systemowe",
+    "level": "Poziom",
+    "module": "Moduł",
+    "message": "Wiadomość",
+    "timestamp": "Czas",
+    "allLevels": "Wszystkie poziomy",
+    "cleanup": "Wyczyść (ponad 30 dni)",
+    "cleanupResult": "Usuniętych wpisów",
+    "noLogs": "Brak wpisów w logach"
   },
   "roles": {
     "admin": "Administrator",
