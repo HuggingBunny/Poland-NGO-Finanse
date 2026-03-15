@@ -151,25 +151,27 @@ On first login with `admin`/`admin` in desktop mode, a prompt will require chang
 
 ### `Error: Port 1420 is already in use`
 
-**Cause**: When `npm run tauri dev` fails mid-startup (e.g. a Rust compile error), the Vite process it spawned becomes an orphan process — it keeps running and holding port 1420 even though the Tauri parent has exited. Trying to run `tauri dev` again hits the occupied port immediately.
+**This is a development-only issue. It does not exist in production builds.**
+In a production `.dmg`/`.deb`/`.msi`, Vite is compiled into the binary — no ports, no Node, nothing external.
 
-**Fix**:
+**Root cause**: A launchd agent (`~/Library/LaunchAgents/com.chad.krakow-ngo-accounting.plist`) with `KeepAlive: true` was running `npm run dev` as a background service and restarting it within 10 seconds whenever it was killed. Killing the Vite process by PID was ineffective because launchd kept respawning it.
+
+**Permanent fix** (done — plist removed):
 ```bash
-pkill -f "vite" && pkill -f "npm run dev"
+launchctl unload ~/Library/LaunchAgents/com.chad.krakow-ngo-accounting.plist
+rm ~/Library/LaunchAgents/com.chad.krakow-ngo-accounting.plist
 ```
 
-Or more surgical — kill by port:
+`tauri dev` manages Vite itself — no background agent is needed or appropriate.
+
+**If the error recurs** (orphan from a crashed `tauri dev` run):
 ```bash
-lsof -ti :1420 | xargs kill -9
+lsof -iTCP:1420 -sTCP:LISTEN -nP   # find what's holding it
+lsof -ti :1420 | xargs kill -9      # clear it
+npm run tauri dev                    # retry
 ```
 
-Verify the port is clear before retrying:
-```bash
-lsof -iTCP:1420 -sTCP:LISTEN -nP   # should return nothing
-npm run tauri dev
-```
-
-**Why `pkill` is preferred**: the orphaned process is owned by PID 1 (init), so it won't appear as a child of your terminal session. `lsof` finds it by port; `pkill` finds it by name.
+**Production note**: `npm run tauri build` compiles React into the Rust binary. The installed app has no dev server, no Vite, no Node process, and listens on no ports.
 
 ---
 
