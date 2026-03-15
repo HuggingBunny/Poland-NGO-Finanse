@@ -13,12 +13,13 @@
 | Module | Polish Name | Status |
 |--------|-------------|--------|
 | Dashboard | Panel główny | ✅ Live — KPI cards, charts, transactions |
-| Receipts | Paragony | ✅ Live — drag-drop, OCR panel, AI classification, approve/reject |
+| Receipts | Paragony | ✅ Live — Ollama AI processing, new vendor detection, approve/reject |
 | Bills | Faktury kosztowe | ✅ Live — overdue tracking, mark paid, add bills |
 | Invoicing | Fakturowanie | ✅ Live — Polish VAT format, NIP/KRS/REGON, KSeF-ready |
 | Payroll | Kadry i płace | ✅ Live — 2026 ZUS+PIT rates, payslip generator |
 | Reports | Raporty | ✅ Live — 6 report types, CSV export, PDF via print dialog |
-| Settings | Ustawienia | ✅ Live — user CRUD, org details, Ollama AI config |
+| Service Providers | Dostawcy | ✅ Live — vendor address book, CRUD, auto-match on receipt import |
+| Settings | Ustawienia | ✅ Live — user CRUD, org details, Ollama config, Email, Backups, Logs |
 | Legal Compliance | Zgodność Prawna | ✅ Live — change feed, urgency badges, dismiss/apply |
 
 ### What works right now (browser dev mode)
@@ -146,6 +147,85 @@ On first login with `admin`/`admin` in desktop mode, a prompt will require chang
 
 ---
 
+## Troubleshooting
+
+### `Error: Port 1420 is already in use`
+
+**Cause**: When `npm run tauri dev` fails mid-startup (e.g. a Rust compile error), the Vite process it spawned becomes an orphan process — it keeps running and holding port 1420 even though the Tauri parent has exited. Trying to run `tauri dev` again hits the occupied port immediately.
+
+**Fix**:
+```bash
+pkill -f "vite" && pkill -f "npm run dev"
+```
+
+Or more surgical — kill by port:
+```bash
+lsof -ti :1420 | xargs kill -9
+```
+
+Verify the port is clear before retrying:
+```bash
+lsof -iTCP:1420 -sTCP:LISTEN -nP   # should return nothing
+npm run tauri dev
+```
+
+**Why `pkill` is preferred**: the orphaned process is owned by PID 1 (init), so it won't appear as a child of your terminal session. `lsof` finds it by port; `pkill` finds it by name.
+
+---
+
+### Ollama not connecting (`test_ollama_connection` returns false)
+
+**Check if Ollama is running:**
+```bash
+curl http://127.0.0.1:11434/api/tags
+```
+If you get `Connection refused`, start it:
+```bash
+ollama serve &
+```
+
+**Check available models:**
+```bash
+ollama list
+```
+If `llama3` isn't listed, pull it:
+```bash
+ollama pull llama3
+```
+
+**Low RAM fallback** — if your machine struggles with llama3 (~8GB RAM required):
+```bash
+ollama pull llama3.2:3b   # smaller, runs on 4GB, less accurate
+```
+Then update Settings → AI → Model to `llama3.2:3b`.
+
+---
+
+### Receipt processing hangs (spinner never resolves)
+
+The Ollama request has a 120-second timeout. If it hits that:
+- Check if Ollama is actually processing: `ollama ps`
+- If nothing shows in `ollama ps`, the request never reached Ollama — check the Ollama URL in Settings → AI
+- If a model shows in `ollama ps` but never finishes, your hardware is too slow for the selected model — switch to a smaller one (see above)
+
+---
+
+### Rust compile errors on first build
+
+First build compiles all dependencies — if it fails:
+
+```bash
+# See just the errors, stripped of noise
+cargo build --manifest-path src-tauri/Cargo.toml 2>&1 | grep -A3 "^error"
+```
+
+Common issues:
+- **Missing Xcode Command Line Tools** (macOS): `xcode-select --install`
+- **Rust toolchain too old**: `rustup update stable`
+- **`tauri-cli` version mismatch**: `cargo install tauri-cli --version "^1.6" --force`
+
+---
+
 ## Polish Legal Compliance
 
 The app is built around the specific compliance requirements for Polish non-profits: 
@@ -179,16 +259,17 @@ A GitHub-hosted `legal-updates.json` feed is polled daily. Upcoming legal change
 
 ## Backend Architecture
 
-### SQLite Schema (10 tables)
+### SQLite Schema (15 tables)
 
 ```
 users, organization, receipts, bills, invoices, invoice_items,
-employees, payslips, app_settings, legal_updates_dismissed
+employees, payslips, app_settings, legal_updates_dismissed,
+service_providers, email_settings, admin_logs, backup_configs, monthly_ledger
 ```
 
 WAL mode enabled. Foreign keys enforced. Schema migration runs on first launch, seeding default org and admin user.
 
-### Tauri Commands (28 registered)
+### Tauri Commands (49 registered)
 
 | Module | Commands |
 |--------|----------|
@@ -201,6 +282,12 @@ WAL mode enabled. Foreign keys enforced. Schema migration runs on first launch, 
 | Settings | `get_organization`, `save_organization`, `get_setting`, `set_setting` |
 | Legal | `get_legal_updates`, `dismiss_legal_update`, `apply_legal_update` |
 | Dashboard | `get_dashboard_data` |
+| Ollama | `process_receipt_with_ollama`, `test_ollama_connection` |
+| Service Providers | `get_service_providers`, `search_service_provider`, `upsert_service_provider`, `delete_service_provider` |
+| Admin Logs | `get_admin_logs`, `add_admin_log`, `cleanup_old_logs` |
+| Backup | `get_backup_configs`, `upsert_backup_config`, `delete_backup_config`, `run_backup`, `list_backups`, `restore_backup` |
+| Email | `get_email_settings`, `save_email_settings` |
+| Ledger | `generate_monthly_ledger`, `get_monthly_ledgers`, `check_monthly_rollover` |
 
 ### invoke() Bridge
 
@@ -277,21 +364,28 @@ Mock data includes 6 employees, receipts from Polish vendors (Empik, PKP, Biedro
 
 ## Roadmap
 
+### Recently Completed
+- ✅ Ollama receipt processing (llama3 / llama3.2-vision, local API, 120s timeout)
+- ✅ Service Providers address book (CRUD, auto-match on receipt import, new vendor detection modal)
+- ✅ Admin Logs tab in Settings (30-day rotation, level filter, auto-refresh)
+- ✅ Multi-target Backups (USB, SMB/NAS, Google Drive Desktop, local path — run/list/restore)
+- ✅ Email config (SMTP settings stored; send functionality intentionally hidden pending full implementation)
+- ✅ Monthly ledger CSV export with auto-rollover detection on 1st of month
+- ✅ Cross-platform Ollama bootstrap scripts (`scripts/install_ollama.sh` / `.ps1`)
+
 ### Next (v0.5.x)
 - Legal compliance alert card on Dashboard
 - Employee management dedicated entry point (currently inside Payroll)
 - Category management UI — custom receipt/payment categories (currently hardcoded)
 - Expenses by employee report
-
-### v0.6.x
-- IT Admin role + Logs module (application logs 30-day rotation, audit logs 90-day rotation)
+- Enable email send functionality (SMTP framework in place, send buttons hidden)
+- Monthly ledger: `.xlsx` template mapping (currently outputs CSV)
 
 ### Medium term
-- Tesseract OCR (Polish + English) for receipt processing
-- Ollama DeepSeek-R1 AI classification for receipts
 - KSeF XML export with UPO token flow
 - ZUS e-Deklaracje XML export
 - JPK_V7M monthly VAT export
+- llama3.2-vision path fully tested for image receipt processing (JPG/PNG)
 - SMB sync for multi-machine SQLite access
 
 ---
