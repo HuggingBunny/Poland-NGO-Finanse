@@ -28,7 +28,15 @@ const MODULE_TITLE_KEYS: Record<Module, string> = {
 
 export function AppShell() {
   const { user } = useAuth();
-  const [activeModule, setActiveModule] = useState<Module>('dashboard');
+
+  // Returns the best landing module for the current user's role
+  const getDefaultForRole = (): Module => {
+    if (!user) return 'dashboard';
+    if (user.role === 'dyrektor') return 'reports';
+    return 'dashboard';
+  };
+
+  const [activeModule, setActiveModule] = useState<Module>(getDefaultForRole);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
 
@@ -38,13 +46,6 @@ export function AppShell() {
       return () => clearTimeout(timer);
     }
   }, [user]);
-
-  // Route protection: redirect to allowed module if current not allowed
-  const getDefaultForRole = (): Module => {
-    if (!user) return 'dashboard';
-    if (user.role === 'dyrektor') return 'reports';
-    return 'dashboard';
-  };
 
   const handleModuleChange = (mod: Module) => {
     setActiveModule(mod);

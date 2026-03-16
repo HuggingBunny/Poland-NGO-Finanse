@@ -102,7 +102,7 @@ export function DashboardModule() {
       change: 8.3,
       icon: Wallet,
       color: 'bg-blue-500',
-      subtitle: 'Stan na dziś',
+      subtitle: t('dashboard.asOfToday'),
     },
     {
       title: t('dashboard.pendingInvoices'),
@@ -110,7 +110,7 @@ export function DashboardModule() {
       change: 0,
       icon: FileText,
       color: 'bg-amber-500',
-      subtitle: `${data?.overdue_bills ?? 0} przeterminowanych`,
+      subtitle: t('dashboard.overdueCount', { count: data?.overdue_bills ?? 0 }),
     },
   ];
 
@@ -158,7 +158,7 @@ export function DashboardModule() {
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={{ r: 3 }}
-                name="Saldo"
+                name={t('dashboard.balance_label')}
               />
             </LineChart>
           </ResponsiveContainer>

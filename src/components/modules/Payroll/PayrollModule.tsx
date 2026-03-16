@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users, ChevronDown, X, FileText, Printer, Loader2 } from 'lucide-react';
+import clsx from 'clsx';
 import { invoke } from '../../../lib/invoke';
 import type { Employee, Payslip } from '../../../types';
 
@@ -14,7 +15,6 @@ const ZUS_RATES_DISPLAY = {
   fp: 0.0245,
   fgsp: 0.001,
 };
-import clsx from 'clsx';
 
 function formatPLN(amount: number) {
   return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(amount);
@@ -34,7 +34,7 @@ function PayslipModal({ payslip, onClose }: PayslipModalProps) {
   const { t } = useTranslation();
   const emp = payslip.employee;
   if (!emp) return null;
-  const [month, year] = payslip.month.split('-');
+  const [year, month] = payslip.month.split('-');
   const monthName = MONTHS_PL[parseInt(month) - 1];
 
   const rows = [

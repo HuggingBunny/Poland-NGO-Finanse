@@ -226,17 +226,21 @@ export function ReceiptsModule() {
   };
 
   const handleApprove = (id: string) => {
-    invoke('update_receipt_status', { id, status: 'zatwierdzony' }).then(() => {
-      setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'zatwierdzony' as ReceiptStatus } : r));
-      if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'zatwierdzony' } : null);
-    });
+    invoke('update_receipt_status', { id, status: 'zatwierdzony' })
+      .then(() => {
+        setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'zatwierdzony' as ReceiptStatus } : r));
+        if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'zatwierdzony' } : null);
+      })
+      .catch(err => console.error('[handleApprove]', err));
   };
 
   const handleReject = (id: string) => {
-    invoke('update_receipt_status', { id, status: 'odrzucony' }).then(() => {
-      setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'odrzucony' as ReceiptStatus } : r));
-      if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'odrzucony' } : null);
-    });
+    invoke('update_receipt_status', { id, status: 'odrzucony' })
+      .then(() => {
+        setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'odrzucony' as ReceiptStatus } : r));
+        if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'odrzucony' } : null);
+      })
+      .catch(err => console.error('[handleReject]', err));
   };
 
   const handleCreateProvider = async (name: string) => {
